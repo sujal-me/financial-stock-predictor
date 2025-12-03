@@ -16,6 +16,9 @@
 
     <!-- Chart.js (Optional for future, but we'll build custom CSS bars for now for speed/simplicity) -->
 
+    <!-- Gradio Client -->
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@gradio/client"></script>
+
     <script>
         tailwind.config = {
             theme: {
@@ -119,12 +122,8 @@
         <!-- Settings Panel (Hidden by default) -->
         <div id="settingsPanel" class="hidden glass-panel rounded-xl p-4 mb-6 border-l-4 border-indigo-500">
             <h3 class="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-2">Configuration</h3>
-            <label class="block text-xs text-slate-400 mb-1">Gradio API URL</label>
-            <div class="flex gap-2">
-                <input type="text" id="apiUrlInput" value="https://nimjesss-financial-news-predictor.hf.space" 
-                    class="flex-1 bg-slate-950 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 text-slate-200 font-mono">
-            </div>
-            <p class="text-xs text-slate-500 mt-2">Gradio live links expire every 72 hours. Update above if requests fail.</p>
+            <p class="text-xs text-slate-400 mb-2">Connected to Gradio model: <code class="text-indigo-300 font-mono">nimjesss/financial-news-predictor</code></p>
+            <p class="text-xs text-slate-500">Using Gradio Client for real-time API communication.</p>
         </div>
 
         <!-- Input Section -->
@@ -252,17 +251,18 @@
     </footer>
 
     <!-- LOGIC -->
-    <script>
+    <script type="module">
+        import { Client } from "https://cdn.jsdelivr.net/npm/@gradio/client";
+
         // --- Configuration & State ---
         const DEFAULT_TEXT = "Apple reports record-breaking quarterly earnings, beating analyst expectations. Revenue hit $50B, up 15% YoY.";
-        let currentApiUrl = "https://nimjesss-financial-news-predictor.hf.space";
+        let currentClient = null;
 
         // --- DOM Elements ---
         const els = {
             input: document.getElementById('newsInput'),
             analyzeBtn: document.getElementById('analyzeBtn'),
             clearBtn: document.getElementById('clearBtn'),
-            apiUrl: document.getElementById('apiUrlInput'),
             settingsPanel: document.getElementById('settingsPanel'),
             toggleSettings: document.getElementById('toggleSettings'),
             
@@ -338,24 +338,20 @@
             els.dashboard.classList.add('hidden');
             els.error.classList.add('hidden');
             els.loading.classList.remove('hidden');
-            currentApiUrl = els.apiUrl.value.replace(/\/$/, ""); // Remove trailing slash
 
             try {
-                // 1. Fetch Data
-                // Note: Gradio API usually expects POST to /api/predict or custom endpoint
-                // We use the raw fetch here to mimic client.predict
-                const response = await fetch(`${currentApiUrl}/run_analysis`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ data: [text] })
+                // Initialize Gradio Client
+                if (!currentClient) {
+                    currentClient = await Client.connect("nimjesss/financial-news-predictor");
+                }
+
+                // Call the API using Gradio Client
+                const result = await currentClient.predict("/run_analysis", {
+                    news_text: text
                 });
 
-                if (!response.ok) throw new Error(`API Connection Failed (${response.status})`);
-
-                const json = await response.json();
-                
-                if (json.data) {
-                    renderDashboard(json.data);
+                if (result.data) {
+                    renderDashboard(result.data);
                 } else {
                     throw new Error("Invalid response format");
                 }
