@@ -344,7 +344,7 @@
                 // 1. Fetch Data
                 // Note: Gradio API usually expects POST to /api/predict or custom endpoint
                 // We use the raw fetch here to mimic client.predict
-                const response = await fetch(`${currentApiUrl}`, {
+                const response = await fetch(`${currentApiUrl}/run_analysis`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ data: [text] })
